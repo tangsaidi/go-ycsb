@@ -3,9 +3,9 @@ package abd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"runtime"
 
@@ -38,8 +38,8 @@ func (r *abd) CleanupThread(_ context.Context) {
 }
 
 func (r *abd) Read(ctx context.Context, table string, key string, fields []string) (map[string][]byte, error) {
-	k := Key(int(Hash(key)))
-	cmd := Command{GET, k, 0}
+	k := Key(key)
+	cmd := Command{GET, k, "default"}
 	var txn Transaction
 	txn.Commands = append(txn.Commands, cmd)
 	txn.Ts = MakeTimestamp()
@@ -56,8 +56,14 @@ func (r *abd) Update(ctx context.Context, table string, key string, values map[s
 }
 
 func (r *abd) Insert(ctx context.Context, table string, key string, values map[string][]byte) error {
-	k := Key(int(Hash(key)))
-	cmd := Command{PUT, k, Value(rand.Int63n(10000000))}
+
+	data, err := json.Marshal(values)
+	if err != nil {
+		return err
+	}
+
+	k := Key(key)
+	cmd := Command{PUT, k, Value(data)}
 	var txn Transaction
 	txn.Commands = append(txn.Commands, cmd)
 	txn.Ts = MakeTimestamp()

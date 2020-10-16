@@ -17,8 +17,8 @@ const (
 var NIL Value
 var DUMMYVAL = Value(0)
 
-type Key int64
-type Value int64
+type Key string
+type Value string
 
 type Version struct {
 	ServerId int32
