@@ -56,7 +56,6 @@ func (r *abd) Update(ctx context.Context, table string, key string, values map[s
 }
 
 func (r *abd) Insert(ctx context.Context, table string, key string, values map[string][]byte) error {
-
 	data, err := json.Marshal(values)
 	if err != nil {
 		return err
@@ -69,6 +68,37 @@ func (r *abd) Insert(ctx context.Context, table string, key string, values map[s
 	txn.Ts = MakeTimestamp()
 	SendObject(r.writer, txn)
 	return nil
+}
+
+func (r *abd) BatchInsert(ctx context.Context, table string, keys []string, values []map[string][]byte) error {
+	var txn Transaction
+	for i, key := range keys {
+		data, err := json.Marshal(values[i])
+		if err != nil {
+			return err
+		}
+
+		k := Key(key)
+		cmd := Command{PUT, k, Value(data)}
+		txn.Commands = append(txn.Commands, cmd)
+	}
+
+	txn.Ts = MakeTimestamp()
+	SendObject(r.writer, txn)
+	return nil
+}
+
+func (r *abd) BatchRead(ctx context.Context, table string, keys []string, fields []string) ([]map[string][]byte, error) {
+	var txn Transaction
+	for _, key := range keys {
+		k := Key(key)
+		cmd := Command{GET, k, "default"}
+		txn.Commands = append(txn.Commands, cmd)
+	}
+
+	txn.Ts = MakeTimestamp()
+	SendObject(r.writer, txn)
+	return nil, nil
 }
 
 func (r *abd) Delete(ctx context.Context, table string, key string) error {
@@ -93,7 +123,7 @@ func (r abdCreator) Create(p *properties.Properties) (ycsb.DB, error) {
 const (
 	serverPort = "abd.server_port"
 	maxProcs   = "abd.max_procs" // GOMAXPROCS
-
+	// batchSize  = "abd.batchsize"
 	// masterAddr = "abd.master_addr"
 	// masterPort = "abd.master_port"
 	// onceCheck  = "abd.once_check" // Check that every expected reply was receiving exactly once
