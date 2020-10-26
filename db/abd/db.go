@@ -105,6 +105,14 @@ func (r *abd) Delete(ctx context.Context, table string, key string) error {
 	return fmt.Errorf("delete is not supported")
 }
 
+func (db *abd) BatchUpdate(ctx context.Context, table string, keys []string, values []map[string][]byte) error {
+	panic("The abdDB has not implemented the batch operation")
+}
+
+func (db *abd) BatchDelete(ctx context.Context, table string, keys []string) error {
+	panic("The abdDB has not implemented the batch operation")
+}
+
 func (r abdCreator) Create(p *properties.Properties) (ycsb.DB, error) {
 	abdClient := &abd{}
 	procs := p.GetInt(maxProcs, 2)
