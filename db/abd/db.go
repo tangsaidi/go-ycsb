@@ -3,6 +3,7 @@ package abd
 import (
 	"bufio"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -44,6 +45,12 @@ func (r *abd) Read(ctx context.Context, table string, key string, fields []strin
 	txn.Commands = append(txn.Commands, cmd)
 	txn.Ts = MakeTimestamp()
 	SendObject(r.writer, txn)
+	gobReader := gob.NewDecoder(r.reader)
+	var response []Value
+	if err := gobReader.Decode(&response); err != nil {
+		fmt.Println("Error when reading:", err)
+	}
+
 	return nil, nil // we don't care about the return value for benchmark purposes
 }
 
@@ -67,6 +74,13 @@ func (r *abd) Insert(ctx context.Context, table string, key string, values map[s
 	txn.Commands = append(txn.Commands, cmd)
 	txn.Ts = MakeTimestamp()
 	SendObject(r.writer, txn)
+
+	gobReader := gob.NewDecoder(r.reader)
+	var response []Value
+	if err := gobReader.Decode(&response); err != nil {
+		fmt.Println("Error when inserting:", err)
+	}
+
 	return nil
 }
 
@@ -85,6 +99,12 @@ func (r *abd) BatchInsert(ctx context.Context, table string, keys []string, valu
 
 	txn.Ts = MakeTimestamp()
 	SendObject(r.writer, txn)
+
+	gobReader := gob.NewDecoder(r.reader)
+	var response []Value
+	if err := gobReader.Decode(&response); err != nil {
+		fmt.Println("Error when inserting:", err)
+	}
 	return nil
 }
 
@@ -98,6 +118,12 @@ func (r *abd) BatchRead(ctx context.Context, table string, keys []string, fields
 
 	txn.Ts = MakeTimestamp()
 	SendObject(r.writer, txn)
+
+	gobReader := gob.NewDecoder(r.reader)
+	var response []Value
+	if err := gobReader.Decode(&response); err != nil {
+		fmt.Println("Error when inserting:", err)
+	}
 	return nil, nil
 }
 
