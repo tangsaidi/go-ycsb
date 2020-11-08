@@ -34,10 +34,8 @@ func (r *abd) Close() error {
 }
 
 func (r *abd) InitThread(ctx context.Context, _ int, _ int) context.Context {
-	reader := bufio.NewReader(*r.conn)
-	writer := bufio.NewWriter(*r.conn)
-	ctx = context.WithValue(ctx, "reader", &reader)
-	ctx = context.WithValue(ctx, "writer", &writer)
+	ctx = context.WithValue(ctx, "reader", bufio.NewReader(*r.conn))
+	ctx = context.WithValue(ctx, "writer", bufio.NewWriter(*r.conn))
 	return ctx
 }
 
