@@ -22,8 +22,10 @@ func init() {
 }
 
 type abd struct {
-	reader *bufio.Reader
-	writer *bufio.Writer
+	// reader *bufio.Reader
+	// writer *bufio.Writer
+	conn *net.Conn
+	// mu   sync.Mutex
 }
 
 func (r *abd) Close() error {
@@ -32,6 +34,10 @@ func (r *abd) Close() error {
 }
 
 func (r *abd) InitThread(ctx context.Context, _ int, _ int) context.Context {
+	reader := bufio.NewReader(*r.conn)
+	writer := bufio.NewWriter(*r.conn)
+	ctx = context.WithValue(ctx, "reader", &reader)
+	ctx = context.WithValue(ctx, "writer", &writer)
 	return ctx
 }
 
@@ -44,13 +50,13 @@ func (r *abd) Read(ctx context.Context, table string, key string, fields []strin
 	var txn Transaction
 	txn.Commands = append(txn.Commands, cmd)
 	txn.Ts = MakeTimestamp()
-	SendObject(r.writer, txn)
-	gobReader := gob.NewDecoder(r.reader)
+	SendObject(ctx.Value("writer").(*bufio.Writer), txn)
+	gobReader := gob.NewDecoder(ctx.Value("reader").(*bufio.Reader))
 	var response []Value
+
 	if err := gobReader.Decode(&response); err != nil {
 		fmt.Println("Error when reading:", err)
 	}
-
 	return nil, nil // we don't care about the return value for benchmark purposes
 }
 
@@ -73,10 +79,10 @@ func (r *abd) Insert(ctx context.Context, table string, key string, values map[s
 	var txn Transaction
 	txn.Commands = append(txn.Commands, cmd)
 	txn.Ts = MakeTimestamp()
-	SendObject(r.writer, txn)
-
-	gobReader := gob.NewDecoder(r.reader)
+	SendObject(ctx.Value("writer").(*bufio.Writer), txn)
+	gobReader := gob.NewDecoder(ctx.Value("reader").(*bufio.Reader))
 	var response []Value
+
 	if err := gobReader.Decode(&response); err != nil {
 		fmt.Println("Error when inserting:", err)
 	}
@@ -98,9 +104,10 @@ func (r *abd) BatchInsert(ctx context.Context, table string, keys []string, valu
 	}
 
 	txn.Ts = MakeTimestamp()
-	SendObject(r.writer, txn)
 
-	gobReader := gob.NewDecoder(r.reader)
+	SendObject(ctx.Value("writer").(*bufio.Writer), txn)
+
+	gobReader := gob.NewDecoder(ctx.Value("reader").(*bufio.Reader))
 	var response []Value
 	if err := gobReader.Decode(&response); err != nil {
 		fmt.Println("Error when inserting:", err)
@@ -117,9 +124,9 @@ func (r *abd) BatchRead(ctx context.Context, table string, keys []string, fields
 	}
 
 	txn.Ts = MakeTimestamp()
-	SendObject(r.writer, txn)
+	SendObject(ctx.Value("writer").(*bufio.Writer), txn)
 
-	gobReader := gob.NewDecoder(r.reader)
+	gobReader := gob.NewDecoder(ctx.Value("reader").(*bufio.Reader))
 	var response []Value
 	if err := gobReader.Decode(&response); err != nil {
 		fmt.Println("Error when inserting:", err)
@@ -148,8 +155,9 @@ func (r abdCreator) Create(p *properties.Properties) (ycsb.DB, error) {
 	if err != nil {
 		log.Printf("Error connecting to replica \n")
 	}
-	abdClient.reader = bufio.NewReader(server)
-	abdClient.writer = bufio.NewWriter(server)
+	abdClient.conn = &server
+	// abdClient.reader = bufio.NewReader(server)
+	// abdClient.writer = bufio.NewWriter(server)
 
 	return abdClient, nil
 }
