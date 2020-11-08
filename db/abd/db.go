@@ -129,7 +129,7 @@ func (r *abd) BatchRead(ctx context.Context, table string, keys []string, fields
 	gobReader := gob.NewDecoder(ctx.Value("reader").(*bufio.Reader))
 	var response []Value
 	if err := gobReader.Decode(&response); err != nil {
-		fmt.Println("Error when inserting:", err)
+		fmt.Println("Error when reading:", err)
 	}
 	return nil, nil
 }
