@@ -9,12 +9,33 @@ import (
 	"log"
 	"net"
 	"runtime"
+	"sort"
+	"strings"
 
 	"github.com/magiconair/properties"
 	"github.com/pingcap/go-ycsb/pkg/ycsb"
 )
 
 type abdCreator struct {
+}
+
+type kvTuple struct {
+	key   string
+	value map[string][]byte
+}
+
+func zip(keys []string, values []map[string][]byte) ([]kvTuple, error) {
+	if len(keys) != len(values) {
+		return nil, fmt.Errorf("zip: arguments must be of same length")
+	}
+
+	r := make([]kvTuple, len(keys), len(values))
+
+	for i, e := range keys {
+		r[i] = kvTuple{e, values[i]}
+	}
+
+	return r, nil
 }
 
 func init() {
@@ -96,13 +117,27 @@ func (r *abd) Insert(ctx context.Context, table string, key string, values map[s
 
 func (r *abd) BatchInsert(ctx context.Context, table string, keys []string, values []map[string][]byte) error {
 	var txn Transaction
-	for i, key := range keys {
-		data, err := json.Marshal(values[i])
+	combined, err := zip(keys, values)
+	if err != nil {
+		return err
+	}
+	sort.Slice(combined, func(i, j int) bool {
+		switch strings.Compare(combined[i].key, combined[j].key) {
+		case -1:
+			return true
+		case 1:
+			return false
+		}
+		return true
+	})
+
+	for _, key := range combined {
+		data, err := json.Marshal(key.value)
 		if err != nil {
 			return err
 		}
 
-		k := Key(key)
+		k := Key(key.key)
 		cmd := Command{PUT, k, Value(data)}
 		txn.Commands = append(txn.Commands, cmd)
 	}
@@ -121,6 +156,17 @@ func (r *abd) BatchInsert(ctx context.Context, table string, keys []string, valu
 
 func (r *abd) BatchRead(ctx context.Context, table string, keys []string, fields []string) ([]map[string][]byte, error) {
 	var txn Transaction
+
+	sort.Slice(keys, func(i, j int) bool {
+		switch strings.Compare(keys[i], keys[j]) {
+		case -1:
+			return true
+		case 1:
+			return false
+		}
+		return true
+	})
+
 	for _, key := range keys {
 		k := Key(key)
 		cmd := Command{GET, k, "default"}
