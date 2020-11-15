@@ -24,7 +24,7 @@ func init() {
 type abd struct {
 	// reader *bufio.Reader
 	// writer *bufio.Writer
-	conn *net.Conn
+	port int
 	// mu   sync.Mutex
 }
 
@@ -34,8 +34,14 @@ func (r *abd) Close() error {
 }
 
 func (r *abd) InitThread(ctx context.Context, _ int, _ int) context.Context {
-	ctx = context.WithValue(ctx, "reader", bufio.NewReader(*r.conn))
-	ctx = context.WithValue(ctx, "writer", bufio.NewWriter(*r.conn))
+	server, err := net.Dial("tcp", fmt.Sprintf(":%d", r.port))
+	if err != nil {
+		log.Printf("Error connecting to replica \n")
+	}
+	conn := &server
+
+	ctx = context.WithValue(ctx, "reader", bufio.NewReader(*conn))
+	ctx = context.WithValue(ctx, "writer", bufio.NewWriter(*conn))
 	return ctx
 }
 
@@ -148,12 +154,14 @@ func (r abdCreator) Create(p *properties.Properties) (ycsb.DB, error) {
 	abdClient := &abd{}
 	procs := p.GetInt(maxProcs, 2)
 	runtime.GOMAXPROCS(procs)
-	port := p.GetInt(serverPort, 7070)
-	server, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		log.Printf("Error connecting to replica \n")
-	}
-	abdClient.conn = &server
+
+	abdClient.port = p.GetInt(serverPort, 7070)
+	// server, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
+	// if err != nil {
+	// 	log.Printf("Error connecting to replica \n")
+	// }
+	// abdClient.conn = &server
+
 	// abdClient.reader = bufio.NewReader(server)
 	// abdClient.writer = bufio.NewWriter(server)
 
